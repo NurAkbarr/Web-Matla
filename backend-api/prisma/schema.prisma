@@ -1,0 +1,240 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             Int             @id @default(autoincrement())
+  name           String
+  email          String          @unique
+  password       String
+  role           Role            @default(STUDENT)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  studentProfile StudentProfile?
+  dosenProfile   DosenProfile?
+  courseSchedules CourseSchedule[] @relation("DosenToCourse")
+  gradeAuditLogs GradeAuditLog[]
+}
+
+model Applicant {
+  id                Int       @id @default(autoincrement())
+  registrationNo    String    @unique
+  fullName          String
+  email             String
+  phone             String
+  program           String
+  status            AppStatus @default(DIPROSES)
+  appliedDate       DateTime  @default(now())
+  birthPlace        String
+  birthDate         DateTime
+  address           String    @db.Text
+  lastEducation     String
+  comparisonOpinion String    @db.Text
+  createdAt         DateTime  @default(now())
+  focusOpinion      String    @db.Text
+  gender            String
+  graduationYear    String
+  importanceOpinion String    @db.Text
+  motivation        String    @db.Text
+  newSkillInterest  String    @db.Text
+  nik               String    @unique
+  paymentProofUrl   String
+  preferredField    String
+  schoolName        String
+  techSkillLevel    Int
+  termsAgreed       Boolean   @default(false)
+  updatedAt         DateTime  @updatedAt
+  employmentStatus  String
+  infoSource        String?
+}
+
+model ProgramStudi {
+  id             Int              @id @default(autoincrement())
+  kode           String           @unique
+  nama           String
+  jenjang        String
+  fakultas       String
+  deskripsi      String?          @db.Text
+  akreditasi     String?
+  status         ProdiStatus      @default(AKTIF)
+  gambarUrl      String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  courses        CourseSchedule[]
+  studentProfile StudentProfile[]
+}
+
+model PmbSetting {
+  id                  Int      @id @default(autoincrement())
+  tahunAjaran         String   @default("2024/2025")
+  gelombangAktif      String   @default("Gelombang 1")
+  deadlinePendaftaran DateTime
+  tagline             String   @default("Mulai Perjalanan Ilmu Anda Bersama Kami")
+  deskripsi           String   @db.Text
+  brosurUrl           String?
+  brosurImages        String?  @db.Text
+  updatedAt           DateTime @updatedAt
+  isOpen              Boolean  @default(true)
+}
+
+model StudentProfile {
+  id             Int          @id @default(autoincrement())
+  userId         Int          @unique
+  nim            String       @unique
+  programStudiId Int
+  semester       Int          @default(1)
+  angkatan       String       @default("2024")
+  ipk            Float        @default(0)
+  sksDitempuh    Int          @default(0)
+  totalSks       Int          @default(144)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  programStudi   ProgramStudi @relation(fields: [programStudiId], references: [id])
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  enrollments    Enrollment[]
+
+  @@index([programStudiId], map: "StudentProfile_programStudiId_fkey")
+}
+
+model DosenProfile {
+  id                Int       @id @default(autoincrement())
+  userId            Int       @unique
+  nidn              String?   @unique
+  academicTitle     String?
+  phoneNumber       String?
+  address           String?   @db.Text
+  gender            String?
+  birthPlace        String?
+  birthDate         DateTime?
+  expertise         String?
+  profilePictureUrl String?   @db.Text
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Announcement {
+  id        Int      @id @default(autoincrement())
+  title     String
+  content   String   @db.Text
+  type      String   @default("info")
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model CourseSchedule {
+  id             Int          @id @default(autoincrement())
+  courseName     String
+  lecturer       String?      // legacy text field, keep optional for backwards compat
+  lecturerId     Int?         // link to User with DOSEN role
+  room           String
+  dayOfWeek      Int
+  startTime      String
+  endTime        String
+  programStudiId Int
+  semester       Int
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  programStudi   ProgramStudi     @relation(fields: [programStudiId], references: [id])
+  dosen          User?            @relation("DosenToCourse", fields: [lecturerId], references: [id])
+  enrollments    Enrollment[]
+  gradeComponents GradeComponent[]
+  isGradesPublished Boolean       @default(false)
+
+  @@index([programStudiId], map: "CourseSchedule_programStudiId_fkey")
+  @@index([lecturerId], map: "CourseSchedule_lecturerId_fkey")
+}
+
+enum Role {
+  STUDENT
+  DOSEN
+  ADMIN
+  SUPER_ADMIN
+}
+
+model Enrollment {
+  id               Int            @id @default(autoincrement())
+  studentProfileId Int
+  courseScheduleId Int
+  gradeScore       Float?         // Nilai Angka
+  gradeLetter      String?        // Nilai Huruf
+  status           String         @default("ENROLLED") // ENROLLED, COMPLETED, FAILED
+  semester         Int
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  student          StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+  course           CourseSchedule @relation(fields: [courseScheduleId], references: [id], onDelete: Cascade)
+  gradeDetails     GradeDetail[]
+  gradeAuditLogs   GradeAuditLog[]
+
+  @@unique([studentProfileId, courseScheduleId])
+  @@index([courseScheduleId], map: "Enrollment_courseScheduleId_fkey")
+}
+
+model GradeComponent {
+  id               Int            @id @default(autoincrement())
+  courseScheduleId Int
+  name             String
+  percentage       Float
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  course           CourseSchedule @relation(fields: [courseScheduleId], references: [id], onDelete: Cascade)
+  gradeDetails     GradeDetail[]
+  gradeAuditLogs   GradeAuditLog[]
+
+  @@index([courseScheduleId])
+}
+
+model GradeDetail {
+  id               Int            @id @default(autoincrement())
+  enrollmentId     Int
+  gradeComponentId Int
+  score            Float
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  enrollment       Enrollment     @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  component        GradeComponent @relation(fields: [gradeComponentId], references: [id], onDelete: Cascade)
+
+  @@unique([enrollmentId, gradeComponentId])
+  @@index([gradeComponentId])
+}
+
+model GradeAuditLog {
+  id               Int            @id @default(autoincrement())
+  enrollmentId     Int
+  gradeComponentId Int
+  oldScore         Float?
+  newScore         Float
+  changedByUserId  Int
+  createdAt        DateTime       @default(now())
+
+  enrollment       Enrollment     @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  component        GradeComponent @relation(fields: [gradeComponentId], references: [id], onDelete: Cascade)
+  changedByUser    User           @relation(fields: [changedByUserId], references: [id])
+
+  @@index([enrollmentId])
+  @@index([gradeComponentId])
+  @@index([changedByUserId])
+}
+
+enum AppStatus {
+  DIPROSES
+  DITERIMA
+  DITOLAK
+}
+
+enum ProdiStatus {
+  AKTIF
+  COMING_SOON
+  NONAKTIF
+}
