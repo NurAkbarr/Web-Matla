@@ -1,6 +1,7 @@
 const express = require("express");
 const dosenController = require("../controllers/dosenController");
 const { authMiddleware, restrictTo } = require("../middleware/authMiddleware");
+const { verifyCourseOwnership } = require("../middleware/courseMiddleware");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
@@ -58,14 +59,14 @@ router.post("/profile/upload", upload.single("profilePicture"), dosenProfileCont
 router.put("/profile/password", dosenProfileController.updatePassword);
 
 router.get("/courses", dosenController.getCourses);
-router.get("/courses/:courseId/students", dosenController.getCourseStudents);
-router.put("/courses/:courseId/grades", dosenController.inputGrades);
+router.get("/courses/:courseId/students", verifyCourseOwnership, dosenController.getCourseStudents);
+router.put("/courses/:courseId/grades", verifyCourseOwnership, dosenController.inputGrades);
 
-router.get("/courses/:courseId/grade-components", dosenController.getGradeComponents);
-router.post("/courses/:courseId/grade-components", dosenController.saveGradeComponents);
+router.get("/courses/:courseId/grade-components", verifyCourseOwnership, dosenController.getGradeComponents);
+router.post("/courses/:courseId/grade-components", verifyCourseOwnership, dosenController.saveGradeComponents);
 
-router.post("/courses/:courseId/publish", dosenController.publishGrades);
-router.get("/courses/:courseId/audit-logs", dosenController.getGradeAuditLogs);
+router.post("/courses/:courseId/publish", verifyCourseOwnership, dosenController.publishGrades);
+router.get("/courses/:courseId/audit-logs", verifyCourseOwnership, dosenController.getGradeAuditLogs);
 
 // Unlock route for Admin (Needs to bypass the DOSEN restriction on this router, 
 // so we should add it in an admin-accessible scope. Wait, this router is mounted.

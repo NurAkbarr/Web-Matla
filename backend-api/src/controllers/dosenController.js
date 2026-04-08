@@ -21,17 +21,8 @@ const getCourses = async (req, res) => {
 
 const getCourseStudents = async (req, res) => {
   try {
-    const dosenId = req.user.id;
     const { courseId } = req.params;
-
-    // Verify course belongs to dosen
-    const course = await prisma.courseSchedule.findFirst({
-      where: { id: parseInt(courseId), lecturerId: dosenId },
-    });
-
-    if (!course) {
-      return res.status(403).json({ message: "Akses ditolak atau mata kuliah tidak ditemukan" });
-    }
+    // req.course is already populated by verifyCourseOwnership middleware
 
     const enrollments = await prisma.enrollment.findMany({
       where: { courseScheduleId: parseInt(courseId) },
@@ -59,12 +50,10 @@ const inputGrades = async (req, res) => {
     const dosenId = req.user.id;
     const { courseId } = req.params;
     const { grades } = req.body; // Array of { enrollmentId, details: [{componentId, score}] }
-
-    const course = await prisma.courseSchedule.findFirst({
-      where: { id: parseInt(courseId), lecturerId: dosenId },
-    });
-
-    if (!course) return res.status(403).json({ message: "Akses ditolak" });
+    
+    // req.course is already populated by verifyCourseOwnership middleware
+    const course = req.course;
+    
     if (course.isGradesPublished) return res.status(400).json({ message: "Nilai telah terkunci karena sudah dipublis. Hubungi Admin untuk membuka kunci." });
 
     // Fetch components to calculate final score
@@ -77,6 +66,11 @@ const inputGrades = async (req, res) => {
       let totalScore = 0;
       for (const d of g.details) {
          const newScore = parseFloat(d.score) || 0;
+         
+         // Validasi range 0-100
+         if (newScore < 0 || newScore > 100) {
+             throw new Error("Invalid Score: Nilai harus berada dalam rentang 0 sampai 100");
+         }
          
          // Ambil nilai lama untuk mendeteksi perubahan
          const existingDetail = await prisma.gradeDetail.findUnique({
@@ -281,14 +275,8 @@ const getAllDosen = async (req, res) => {
 // Publish Grades
 const publishGrades = async (req, res) => {
     try {
-        const dosenId = req.user.id;
         const { courseId } = req.params;
-
-        const course = await prisma.courseSchedule.findFirst({
-            where: { id: parseInt(courseId), lecturerId: dosenId },
-        });
-
-        if (!course) return res.status(403).json({ message: "Akses ditolak" });
+        // req.course is already populated by verifyCourseOwnership middleware
 
         await prisma.courseSchedule.update({
             where: { id: parseInt(courseId) },
