@@ -14,6 +14,7 @@
   "type": "commonjs",
   "dependencies": {
     "@prisma/adapter-planetscale": "^7.4.2",
+    "@prisma/client": "^5.22.0",
     "bcrypt": "^6.0.0",
     "bcryptjs": "^3.0.3",
     "body-parser": "^2.2.2",
@@ -26,11 +27,10 @@
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.1.1",
     "mysql2": "^3.19.0",
+    "prisma": "^5.22.0",
     "xss-clean": "^0.1.4"
   },
   "devDependencies": {
-    "@prisma/client": "^5.22.0",
-    "nodemon": "^3.1.14",
-    "prisma": "^5.22.0"
+    "nodemon": "^3.1.14"
   }
 }
