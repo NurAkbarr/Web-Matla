@@ -24,13 +24,13 @@ jobs:
           npm run build
 
       - name: Deploy via FTP
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: matla.id
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           protocol: ftp
           local-dir: frontend/dist/
-          server-dir: public_html
+          server-dir: ./public_html/
           dangerous-clean-slate: true
           log-level: verbose
